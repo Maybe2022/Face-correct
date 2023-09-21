@@ -103,6 +103,46 @@ img2 = Image.open('path_to_image2.jpg')
 concatenate_images(img1, img2)
 
 
+from PIL import Image
+
+def concatenate_images(img_list, save_path):
+    # 确定是横屏还是竖屏
+    if img_list[0].size[0] > img_list[0].size[1]:  # 横屏
+        # 确保所有图片宽度相同
+        assert all([img.size[0] == img_list[0].size[0] for img in img_list]), "所有图片的宽度需要相同"
+
+        # 创建一个新的图片，高度是所有图片的高度之和，宽度与原图相同
+        combined_height = sum([img.size[1] for img in img_list])
+        combined_img = Image.new('RGB', (img_list[0].size[0], combined_height))
+
+        y_offset = 0
+        for img in img_list:
+            combined_img.paste(img, (0, y_offset))
+            y_offset += img.size[1]
+
+    else:  # 竖屏
+        # 确保所有图片高度相同
+        assert all([img.size[1] == img_list[0].size[1] for img in img_list]), "所有图片的高度需要相同"
+
+        # 创建一个新的图片，宽度是所有图片的宽度之和，高度与原图相同
+        combined_width = sum([img.size[0] for img in img_list])
+        combined_img = Image.new('RGB', (combined_width, img_list[0].size[1]))
+
+        x_offset = 0
+        for img in img_list:
+            combined_img.paste(img, (x_offset, 0))
+            x_offset += img.size[0]
+
+    # 保存合并后的图片
+    combined_img.save(save_path)
+
+# 使用方法：
+images = [Image.open('path_to_image1.jpg'), Image.open('path_to_image2.jpg'), Image.open('path_to_image3.jpg')]
+save_path = 'combined_image.jpg'
+concatenate_images(images, save_path)
+
+
+
 
 if __name__ == "__main__":
     IMAGE_DIR = 'path_to_images_directory'
