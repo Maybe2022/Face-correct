@@ -41,6 +41,43 @@ def process_video(video_path, output_path):
     out.release()
 
 
+from PIL import Image, ExifTags
+
+
+def open_image_with_orientation(image_path):
+    img = Image.open(image_path)
+
+    try:
+        # 获取图像的 Exif 数据
+        exif = dict(img._getexif().items())
+
+        # 如果 Exif 数据中存在方向标记
+        if ExifTags.TAGS["Orientation"] in exif:
+
+            orientation = exif[ExifTags.TAGS["Orientation"]]
+
+            # 旋转图片
+            if orientation == 2:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 3:
+                img = img.rotate(180)
+            elif orientation == 4:
+                img = img.rotate(180).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 5:
+                img = img.rotate(-90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 6:
+                img = img.rotate(-90, expand=True)
+            elif orientation == 7:
+                img = img.rotate(90, expand=True).transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 8:
+                img = img.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError):
+        # 有些图片可能没有 Exif 数据，直接返回原图片
+        pass
+
+    return img
+
+
 if __name__ == "__main__":
     IMAGE_DIR = 'path_to_images_directory'
     VIDEO_DIR = 'path_to_videos_directory'
