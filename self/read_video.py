@@ -1,9 +1,7 @@
 
-
-
-
 import os
 import cv2
+import glob
 
 def merge_frames(frames_paths):
     frames = [cv2.imread(path) for path in frames_paths]
@@ -14,11 +12,13 @@ def merge_frames(frames_paths):
     return merged_frame
 
 def process_video(data_dir, output_path):
-    frame_dirs = sorted([os.path.join(data_dir, name) for name in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, name))])
+    frame_dirs = sorted(glob.glob(os.path.join(data_dir, "*/")))
 
     # 读取第一帧来确定视频参数
-    first_frame_files = sorted(os.listdir(frame_dirs[0]))
-    first_frame_paths = [os.path.join(frame_dirs[0], fname) for fname in first_frame_files]
+    frame_patterns = ['*input.jpg', '*out.jpg', '*out1.jpg']
+    first_frame_paths = sorted(glob.glob(os.path.join(frame_dirs[0], frame_patterns[0])) +
+                               glob.glob(os.path.join(frame_dirs[0], frame_patterns[1])) +
+                               glob.glob(os.path.join(frame_dirs[0], frame_patterns[2])))
     merged_first_frame = merge_frames(first_frame_paths)
     h, w, layers = merged_first_frame.shape
     size = (w, h)
@@ -26,8 +26,9 @@ def process_video(data_dir, output_path):
     out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 20.0, size)
 
     for frame_dir in frame_dirs:
-        frame_files = sorted(os.listdir(frame_dir))
-        frame_paths = [os.path.join(frame_dir, fname) for fname in frame_files]
+        frame_paths = sorted(glob.glob(os.path.join(frame_dir, frame_patterns[0])) +
+                             glob.glob(os.path.join(frame_dir, frame_patterns[1])) +
+                             glob.glob(os.path.join(frame_dir, frame_patterns[2])))
         merged_frame = merge_frames(frame_paths)
         out.write(merged_frame)
 
@@ -38,3 +39,4 @@ if __name__ == "__main__":
     output_video_path = "merged_video.mp4"
     process_video(data_directory, output_video_path)
     print(f"Video saved at {output_video_path}")
+
