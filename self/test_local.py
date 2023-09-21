@@ -78,6 +78,32 @@ def open_image_with_orientation(image_path):
     return img
 
 
+from PIL import Image
+
+def concatenate_images(img1, img2):
+    # 确保两张图片高度一样
+    assert img1.size[1] == img2.size[1], "两张图片的高度需要相同"
+
+    # 创建一个新图片，宽度是两张图片的宽度之和，高度与原图相同
+    combined_width = img1.size[0] + img2.size[0]
+    combined_img = Image.new('RGB', (combined_width, img1.size[1]))
+
+    # 将两张图片贴到新图上
+    combined_img.paste(img1, (0, 0))
+    combined_img.paste(img2, (img1.size[0], 0))
+
+    # 保存合并后的图片
+    combined_img.save('combined_image.jpg')
+
+# 读取两张图片
+img1 = Image.open('path_to_image1.jpg')
+img2 = Image.open('path_to_image2.jpg')
+
+# 并排放置两张图片并保存
+concatenate_images(img1, img2)
+
+
+
 if __name__ == "__main__":
     IMAGE_DIR = 'path_to_images_directory'
     VIDEO_DIR = 'path_to_videos_directory'
