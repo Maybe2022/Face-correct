@@ -1,0 +1,62 @@
+import os
+import cv2
+import torch
+import numpy as np
+
+# 加载模型
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = torch.load('path_to_your_model.pt')
+model.to(device)
+model.eval()
+
+
+def process_image(img_path):
+    img = cv2.imread(img_path)
+    processed_img = model_predict(img).squeeze(0)
+    return processed_img
+
+
+def model_predict(data):
+    tensor = torch.from_numpy(data).float().to(device)
+    output = model(tensor)
+    corrected_data = output.cpu().numpy().astype('uint8')
+    return corrected_data
+
+
+def process_video(video_path, output_path):
+    vidcap = cv2.VideoCapture(video_path)
+    success, image = vidcap.read()
+    frames = []
+    while success:
+        frames.append(image)
+        success, image = vidcap.read()
+
+    video_data = np.stack(frames, axis=0)
+    corrected_video = model_predict(video_data)
+
+    height, width, layers = corrected_video[0].shape
+    out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 20.0, (width, height))
+    for frame in corrected_video:
+        out.write(frame)
+    out.release()
+
+
+if __name__ == "__main__":
+    IMAGE_DIR = 'path_to_images_directory'
+    VIDEO_DIR = 'path_to_videos_directory'
+    OUTPUT_DIR = 'output_directory'
+
+    for img_name in os.listdir(IMAGE_DIR):
+        if img_name.endswith(('.jpg', '.png', '.jpeg')):
+            image_path = os.path.join(IMAGE_DIR, img_name)
+            image = cv2.imread(image_path)
+            image_data = np.transpose(image, (2, 0, 1))
+            image_data = np.expand_dims(image_data, 0)
+            corrected_img = process_image(image_data)
+            cv2.imwrite(os.path.join(OUTPUT_DIR, f"corrected_{img_name}"), corrected_img)
+
+    for video_name in os.listdir(VIDEO_DIR):
+        if video_name.endswith('.mp4'):
+            video_path = os.path.join(VIDEO_DIR, video_name)
+            output_video_path = os.path.join(OUTPUT_DIR, f"corrected_{video_name}")
+            process_video(video_path, output_video_path)
