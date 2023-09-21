@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="222.187.226.110" id="8001fdf6-660a-49d1-8443-b7352d6d7cdf" port="17245" nameFormat="DESCRIPTIVE" username="root" useOpenSSHConfig="true" />
+      <sshConfig authType="PASSWORD" host="connect.westa.seetacloud.com" id="66f9cf50-9042-4fc7-9cb3-f9c6c537121d" port="15664" nameFormat="DESCRIPTIVE" username="root" useOpenSSHConfig="true" />
+      <sshConfig authType="PASSWORD" host="connect.westa.seetacloud.com" id="645275ae-e255-418e-aee6-dfd9b081e529" port="53756" nameFormat="DESCRIPTIVE" username="root" useOpenSSHConfig="true" />
+      <sshConfig authType="PASSWORD" host="connect.westb.seetacloud.com" id="71d2dc62-71d6-4e54-8c43-c3f93eeec78d" port="45600" nameFormat="DESCRIPTIVE" username="root" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>
