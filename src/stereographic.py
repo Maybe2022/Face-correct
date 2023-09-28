@@ -40,21 +40,30 @@ def get_uniform_stereo_mesh(image, fov, Q, mesh_ds_ratio):
     f = FOV2f(fov, d)
     r0 = d / (2 * np.tan(0.5 * np.arctan(d / (2 * f))))
 
-    x = (np.arange(0, Wm, 1)).astype(np.float32) - Wm / 2
-    y = (np.arange(0, Hm, 1)).astype(np.float32) - Hm / 2
+    x = (np.arange(0, Wm, 1)).astype(np.float32) - Wm // 2 + 0.5
+    y = (np.arange(0, Hm, 1)).astype(np.float32) - Hm // 2 + 0.5
     x = x * mesh_ds_ratio
     y = y * mesh_ds_ratio
     x, y = np.meshgrid(x, y)
-
     mesh_uniform = np.stack([x, y], axis=0)
+    # print(mesh_uniform.shape)
+
+    # x = (np.arange(0, W, 1)).astype(np.float32)
+    # y = (np.arange(0, H, 1)).astype(np.float32)
+    # x, y = np.meshgrid(x, y)
+    # mesh_uniform = np.stack([x, y], axis=0)
+    # mesh_uniform = cv2.resize(mesh_uniform.transpose([1, 2, 0]), (Wm, Hm)).transpose([2, 0, 1])
+    # print(mesh_uniform.shape)
+
+
     rp = np.linalg.norm(mesh_uniform, axis=0)
-    ru = r0 * np.tan(0.5 * np.arctan(rp / f)) + 1e-10
+    ru = r0 * np.tan(0.5 * np.arctan(rp / f))
 
     x = x / ru * rp
     y = y / ru * rp
     mesh_stereo = np.stack([x, y], axis=0)
 
-    return mesh_uniform, mesh_stereo
+    return mesh_uniform, mesh_stereo, - (W // mesh_ds_ratio // 2) + 0.5, - (H // mesh_ds_ratio // 2) + 0.5
 
 
 if __name__ == "__main__":

@@ -62,7 +62,7 @@ def get_uniform_stereo_mesh(image, fov, Q = 4,  mesh_ds_ratio = 40):
     y = y / ru * rp
     mesh_stereo = np.stack([x, y], axis=0)
 
-    return mesh_uniform, mesh_stereo
+    return mesh_uniform, mesh_stereo, - (W // mesh_ds_ratio // 2) + 0.5, - (H // mesh_ds_ratio // 2) + 0.5
 
 
 
@@ -110,81 +110,164 @@ def mesh_to_image(image, mesh_optimal):
     return out
 
 
+
+
+
+
 if __name__ == '__main__':
     # 测试图片
     image = cv2.imread('/root/data/1_97.jpg')
-    H,W,_ = image.shape
-    x = (np.arange(0, W, 1)).astype(np.float32)
-    y = (np.arange(0, H, 1)).astype(np.float32)
-    x, y = np.meshgrid(x, y)
-    mesh_uniform = np.stack([x, y], axis=0).transpose([1, 2, 0])
-    print(mesh_uniform.shape)
-    Wm = 100
-    Hm = 100
-    mesh_uniform = cv2.resize(mesh_uniform, (Wm, Hm))
-    mesh_uniform = cv2.resize(mesh_uniform, (W, H))
-    x, y = mesh_uniform[:,:,0], mesh_uniform[:,:,1]
+    mesh_uniform, mesh_stereo, x_, y_ = get_uniform_stereo_mesh(image, 97, 4, 30)
 
-    # 扩展图像边界
-    pad = 50
-    image_padded = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=[0, 0, 0])
 
-    # 调整网格坐标以匹配扩展后的图像
-    x += pad
-    y += pad
 
-    image_corrected = cv2.remap(image_padded, x, y, interpolation=cv2.INTER_LANCZOS4,
-                                       borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
-
-    size = 10
-    cv2.imwrite('test.jpg', cv2.resize(image_corrected[size:-size,size:-size:,:], (W, H)))
-
-    # mesh_ds_ratio = 40
-    # Q = 4
+    mesh_uniform = mesh_uniform[:, 4:-4, 4:-4]
+    print(mesh_uniform)
+    mesh_uniform /= 30
+    print(mesh_uniform)
+    mesh_uniform[0] -= x_
+    mesh_uniform[1] -= y_
+    print(mesh_uniform)
     # H, W, _ = image.shape
-    # print(H, W)
-    # Hm = H // mesh_ds_ratio + 2 * Q
-    # Wm = W // mesh_ds_ratio + 2 * Q
-    # x = (np.arange(0, Wm, 1)).astype(np.float32) - (Wm // 2) + 0.5
-    # y = (np.arange(0, Hm, 1)).astype(np.float32) - (Hm // 2) + 0.5
-    # x = (np.arange(0, Wm, 1)).astype(np.float32) / (Wm - 1) * 2 - 1
-    # y = (np.arange(0, Hm, 1)).astype(np.float32) / (Hm - 1) * 2 - 1
-    # x = x * mesh_ds_ratio
-    # y = y * mesh_ds_ratio
+    mesh_uniform = mesh_uniform.transpose([1, 2, 0])
+
+    Hm, Wm, _ = mesh_uniform.shape
+    print(Hm, Wm)
+
+    pad = 50
+    image_pad = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    H, W, _ = image_pad.shape
+
+    map_optimal = cv2.resize(mesh_uniform, (W, H)) + 0.5
+    x, y = map_optimal[:, :, 0], map_optimal[:, :, 1]
+    x = x * W / Wm
+    y = y * H / Hm
+    print(x)
+    print(x[2,2], y[2,2])
+
+    image_corrected = cv2.remap(image_pad, x, y, interpolation=cv2.INTER_LANCZOS4,
+                                                            borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+
+    cv2.imwrite('test.jpg', image_corrected[pad:-pad,pad:-pad,:])
+
+
+
+
+
+
+
+
+
+    # pad = 50
+    # image_padded = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    # #
+    # H, W, _ = image_padded.shape
+    # # H, W, _ = image.shape
+    # Wm = W // 40
+    # Hm = H // 40
+
+
+
+
+
+
+    # x = (np.arange(0, W, 1)).astype(np.float32) - W / 2
+    # y = (np.arange(0, H, 1)).astype(np.float32) - H / 2
+
 
     # x, y = np.meshgrid(x, y)
-    # mesh_uniform = np.stack([x, y], axis=0)
-
-    # mesh_optimal = mesh_uniform[:, Q:-Q, Q:-Q].transpose([1, 2, 0])
-
-
-    # mesh_optimal = mesh_uniform.transpose([1, 2, 0])
-
-    # 设定扩展的边界宽度
-    # border_width = 80
-    # 使用copyMakeBorder来扩展图像边界
-    # image_padded = cv2.copyMakeBorder(image, border_width, border_width, border_width, border_width,
-    #                                   cv2.BORDER_CONSTANT, value=(0, 0, 0))
-    # print("image shape: ", image_padded.shape)
-    # image_padded = image
-    # H, W, _  = image_padded.shape
+    # mesh_uniform = np.stack([x, y], axis=0).transpose([1, 2, 0])
     #
-    # print("warping image")
-    # map_optimal = cv2.resize(mesh_optimal, (W, H),)
-    # # [-1, 1] -> [0, W-1]
-    # map_optimal[:, :, 0] = (map_optimal[:, :, 0] + 1) / 2 * (W - 1)
-    # map_optimal[:, :, 1] = (map_optimal[:, :, 1] + 1) / 2 * (H - 1)
-    # x, y = map_optimal[:, :, 0], map_optimal[:, :, 1]
-    # # x, y = map_optimal[:, :, 0] + W // 2 , map_optimal[:, :, 1] + H // 2
-    # print("x shape: ", x.shape)
-    # # 接下来, 在padded的图像上进行remap
-    # image_corrected_padded = cv2.remap(image_padded, x, y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
-    # print("image_corrected_padded shape: ", image_corrected_padded.shape)
-    # # 最后, 裁剪掉扩展的边界
-    # # image_corrected = image_corrected_padded[border_width:-border_width, border_width:-border_width]
-    # # image_corrected = image_corrected[20:-20, 20:-20]
+    # print(mesh_uniform[60,60,:])
+
+    # print(mesh_uniform.shape)
+
+    # Wm = 100
+    # Hm = 100
+    # x = (np.arange(0, Wm, 1)).astype(np.float32) + 0.5
+    # y = (np.arange(0, Hm, 1)).astype(np.float32) + 0.5
+    # # x = x * 40
+    # # y = y * 40
     #
-    # # image_corrected = cv2.remap(image, x, y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+    # x, y = np.meshgrid(x, y)
+    # mesh_uniform = np.stack([x, y], axis=0).transpose([1, 2, 0])
+    # mesh_uniform = cv2.resize(mesh_uniform, (Wm, Hm),)
+    # print(mesh_uniform[60,60,:])
+    # # mesh_uniform = cv2.resize(mesh_uniform, (W, H))
     #
-    # cv2.imwrite('test.jpg', image_corrected_padded)
+    #
+    # # print(mesh_uniform[0,0,:])
+    #
+    # # x, y = mesh_uniform[:,:,0], mesh_uniform[:,:,1]
+    #
+    # # 扩展图像边界
+    # pad = 50
+    # image_padded = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    # # #
+    # H, W, _ = image_padded.shape
+    #
+    # mesh_uniform = cv2.resize(mesh_uniform, (W, H))
+    # print(mesh_uniform[60,60,:])
+    # x, y = mesh_uniform[:, :, 0], mesh_uniform[:, :, 1]
+    # # x = x + W // 2
+    # # y = y + H // 2
+    # x = x * W / Wm
+    # y = y * H / Hm
+    # # # # 调整网格坐标以匹配扩展后的图像
+    # # x += pad
+    # # y += pad
+    # # image_padded = image
+    # image_corrected = cv2.remap(image_padded, x, y, interpolation=cv2.INTER_LANCZOS4,
+    #                             borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+    # # cv2.imwrite('test.jpg', cv2.resize(image_corrected[size:-size,size:-size:,:], (W, H)))
+    # print(image_corrected.shape)
+    # cv2.imwrite('test.jpg', image_corrected[pad:-pad,pad:-pad,:])
+    # # mesh_ds_ratio = 40
+    # # Q = 4
+    # # H, W, _ = image.shape
+    # # print(H, W)
+    # # Hm = H // mesh_ds_ratio + 2 * Q
+    # # Wm = W // mesh_ds_ratio + 2 * Q
+    # # x = (np.arange(0, Wm, 1)).astype(np.float32) - (Wm // 2) + 0.5
+    # # y = (np.arange(0, Hm, 1)).astype(np.float32) - (Hm // 2) + 0.5
+    # # x = (np.arange(0, Wm, 1)).astype(np.float32) / (Wm - 1) * 2 - 1
+    # # y = (np.arange(0, Hm, 1)).astype(np.float32) / (Hm - 1) * 2 - 1
+    # # x = x * mesh_ds_ratio
+    # # y = y * mesh_ds_ratio
+    #
+    # # x, y = np.meshgrid(x, y)
+    # # mesh_uniform = np.stack([x, y], axis=0)
+    #
+    # # mesh_optimal = mesh_uniform[:, Q:-Q, Q:-Q].transpose([1, 2, 0])
+    #
+    #
+    # # mesh_optimal = mesh_uniform.transpose([1, 2, 0])
+    #
+    # # 设定扩展的边界宽度
+    # # border_width = 80
+    # # 使用copyMakeBorder来扩展图像边界
+    # # image_padded = cv2.copyMakeBorder(image, border_width, border_width, border_width, border_width,
+    # #                                   cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    # # print("image shape: ", image_padded.shape)
+    # # image_padded = image
+    # # H, W, _  = image_padded.shape
+    # #
+    # # print("warping image")
+    # # map_optimal = cv2.resize(mesh_optimal, (W, H),)
+    # # # [-1, 1] -> [0, W-1]
+    # # map_optimal[:, :, 0] = (map_optimal[:, :, 0] + 1) / 2 * (W - 1)
+    # # map_optimal[:, :, 1] = (map_optimal[:, :, 1] + 1) / 2 * (H - 1)
+    # # x, y = map_optimal[:, :, 0], map_optimal[:, :, 1]
+    # # # x, y = map_optimal[:, :, 0] + W // 2 , map_optimal[:, :, 1] + H // 2
+    # # print("x shape: ", x.shape)
+    # # # 接下来, 在padded的图像上进行remap
+    # # image_corrected_padded = cv2.remap(image_padded, x, y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+    # # print("image_corrected_padded shape: ", image_corrected_padded.shape)
+    # # # 最后, 裁剪掉扩展的边界
+    # # # image_corrected = image_corrected_padded[border_width:-border_width, border_width:-border_width]
+    # # # image_corrected = image_corrected[20:-20, 20:-20]
+    # #
+    # # # image_corrected = cv2.remap(image, x, y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
+    # #
+    # # cv2.imwrite('test.jpg', image_corrected_padded)
 

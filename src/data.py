@@ -113,6 +113,10 @@ class ImageDataset(Dataset):
         fov = 108
 
         image = cv2.imread(data_name)
+
+        # pad = 50
+        # image = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+        #
         H, W, _ = image.shape
 
         Hm = H // self.mesh_ds_ratio
@@ -143,7 +147,7 @@ class ImageDataset(Dataset):
         seg_mask_padded = np.pad(seg_mask, [[self.Q, self.Q], [self.Q, self.Q]], "constant")
         box_masks_padded = np.pad(box_masks, [[0, 0], [self.Q, self.Q], [self.Q, self.Q]], "constant")
 
-        mesh_uniform_padded, mesh_stereo_padded = get_uniform_stereo_mesh(image, fov * np.pi / 180, self.Q, self.mesh_ds_ratio)
+        mesh_uniform_padded, mesh_stereo_padded, x_, y_ = get_uniform_stereo_mesh(image, fov * np.pi / 180, self.Q, self.mesh_ds_ratio)
 
 
         radial_distance_padded = np.linalg.norm(mesh_uniform_padded, axis=0)
@@ -152,7 +156,7 @@ class ImageDataset(Dataset):
         rb = half_diagonal / (2 * np.log(99))
         correction_strength = 1 / (1 + np.exp(-(radial_distance_padded - ra) / rb))
 
-        return image, mesh_uniform_padded, mesh_stereo_padded, correction_strength, seg_mask_padded, box_masks_padded
+        return image, mesh_uniform_padded, mesh_stereo_padded, correction_strength, seg_mask_padded, box_masks_padded, x_, y_
 
 
 

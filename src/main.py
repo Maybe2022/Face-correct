@@ -15,7 +15,7 @@ parser.add_argument('--file', type=str, required=True)
 parser.add_argument('--num_iter', type=int, default=200, help="number of optimization steps")
 parser.add_argument('--lr', type=float, default=0.5, help="learning rate")
 parser.add_argument('--Q', type=int, default=4, help="number of padding vertices")
-parser.add_argument('--mesh_ds_ratio', type=int, default=10, help="the pixel-to-vertex ratio")
+parser.add_argument('--mesh_ds_ratio', type=int, default=40, help="the pixel-to-vertex ratio")
 
 parser.add_argument('--naive', type=int, default=0, help="if set True, perform naive orthographic correction")
 parser.add_argument('--face_energy', type=float, default=4, help="weight of the face energy term")
@@ -25,28 +25,48 @@ parser.add_argument('--regularization', type=float, default=0.5, help="weight of
 parser.add_argument('--boundary_constraint', type=float, default=4, help="weight of the mesh boundary constraint")
 
 
-def mesh_to_image(image, mesh_optimal):
+def mesh_to_image(image, mesh_optimal,x_= 0,y_ = 0):
 
-    H, W, _ = image.shape
-    map_optimal = cv2.resize(mesh_optimal, (W, H))
-    x, y = map_optimal[:, :, 0] + W / 2, map_optimal[:, :, 1] + H / 2
+    H_, W_, _ = image.shape
+    # H, W, _ = image.shape
+    # if mesh_uniform is not None:
+    #     map_optimal = cv2.resize(mesh_uniform, (W, H))
+    # else:
+    #     map_optimal = cv2.resize(mesh_optimal, (W, H))
+
+    mesh_optimal /= args.mesh_ds_ratio
+    mesh_optimal[:,:,0] -= x_
+    mesh_optimal[:,:,1] -= y_
+    Hm, Wm, _ = mesh_optimal.shape
+
+
+
+    # x, y = map_optimal[:, :, 0] + W / 2, map_optimal[:, :, 1] + H / 2
 
 
     # # 设定扩展的边界宽度
-    border_width = 1
+    border_width = 50
     # 使用copyMakeBorder来扩展图像边界
-    image = cv2.copyMakeBorder(image, border_width, border_width, border_width, border_width,
-                                      cv2.BORDER_REPLICATE)
-    x = x + border_width
-    y = y + border_width
+    image = cv2.copyMakeBorder(image, border_width, border_width, border_width, border_width, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    H, W, _ = image.shape
+    # 将mesh的坐标映射到扩展后的图像上
+    mesh_optimal = cv2.resize(mesh_optimal, (W, H)) + 0.5
+    print(mesh_optimal)
+    x, y = mesh_optimal[:, :, 0], mesh_optimal[:, :, 1]
+
+    x = x * W / Wm
+    y = y * H / Hm
 
     print("warping image")
     # map_optimal = cv2.resize(mesh_optimal, (W, H))
     # 接下来, 在padded的图像上进行remap
-    image_corrected = cv2.remap(image, x, y, interpolation=cv2.INTER_LINEAR,borderMode=cv2.BORDER_REPLICATE)
+    image_corrected = cv2.remap(image, x, y, interpolation=cv2.INTER_LINEAR,)
 
     # 最后, 裁剪掉扩展的边界
-    out = cv2.resize(image_corrected[border_width : -border_width,border_width :-border_width,:], (W, H))
+    out = image_corrected[border_width : -border_width,border_width :-border_width,:]
+
+    size = 50
+    out = cv2.resize(out[size: -size,size :-size,:], (W_, H_))
     return out
 
 
@@ -61,7 +81,7 @@ if __name__ == '__main__':
 
     _, filename = os.path.split(args.file)
     filename, _ = os.path.splitext(filename)
-    image, mesh_uniform_padded, mesh_stereo_padded, correction_strength, seg_mask_padded, box_masks_padded = dataset.get_image_by_file(
+    image, mesh_uniform_padded, mesh_stereo_padded, correction_strength, seg_mask_padded, box_masks_padded, x_, y_ = dataset.get_image_by_file(
         args.file)
 
     out_dir = "results/{}".format(
@@ -99,7 +119,8 @@ if __name__ == '__main__':
     # perform optimization
     print("optimizing")
     for i in range(args.num_iter):
-
+        if i == 150:
+            model.opt["face_energy"] = 0.
         optim.zero_grad()
         loss = model.forward()
         print("step {}, loss = {}".format(i, loss.item()))
@@ -137,7 +158,7 @@ if __name__ == '__main__':
     # out = cv2.remap(image, x.astype(np.float32), y.astype(np.float32), interpolation=cv2.INTER_LINEAR)
 
 
-    out = mesh_to_image(image, mesh_optimal,)
+    out = mesh_to_image(image, mesh_optimal,x_, y_)
 
     # output
     cv2.imwrite(os.path.join(out_dir, "{}_input.jpg".format(filename)), image)
