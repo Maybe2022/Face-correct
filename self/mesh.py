@@ -111,6 +111,40 @@ def mesh_to_image(image, mesh_optimal):
 
 
 
+import cv2
+
+def detect_black_border(img, threshold=50):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    h, w = gray.shape
+
+    top, bottom, left, right = 0, h-1, 0, w-1
+
+    while np.mean(gray[top]) < threshold:
+        top += 1
+
+    while np.mean(gray[bottom]) < threshold:
+        bottom -= 1
+
+    while np.mean(gray[:, left]) < threshold:
+        left += 1
+
+    while np.mean(gray[:, right]) < threshold:
+        right -= 1
+
+    return top, bottom, left, right
+
+
+def crop_and_resize(img):
+    H, W ,_ = img.shape
+    original_size = (W, H)
+    top, bottom, left, right = detect_black_border(img)
+    cropped_img = img[top:bottom+1, left:right+1]
+    resized_img = cv2.resize(cropped_img, original_size)
+    return resized_img
+
+
+
 
 
 
@@ -148,7 +182,7 @@ if __name__ == '__main__':
     image_corrected = cv2.remap(image_pad, x, y, interpolation=cv2.INTER_LANCZOS4,
                                                             borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0))
 
-    cv2.imwrite('test.jpg', image_corrected[pad:-pad,pad:-pad,:])
+    cv2.imwrite('test.jpg', image_corrected)
 
 
 

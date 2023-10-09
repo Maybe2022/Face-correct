@@ -25,6 +25,114 @@ parser.add_argument('--regularization', type=float, default=0.5, help="weight of
 parser.add_argument('--boundary_constraint', type=float, default=4, help="weight of the mesh boundary constraint")
 
 
+def detect_black_border(img, threshold=50):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    h, w = gray.shape
+
+    top, bottom, left, right = 0, h-1, 0, w-1
+
+    while np.mean(gray[top]) < threshold:
+        top += 1
+
+    while np.mean(gray[bottom]) < threshold:
+        bottom -= 1
+
+    while np.mean(gray[:, left]) < threshold:
+        left += 1
+
+    while np.mean(gray[:, right]) < threshold:
+        right -= 1
+
+    return top, bottom, left, right
+
+
+def crop_black_border(img):
+    h, w = img.shape[:2]
+
+    # 设定阈值
+    threshold = 0.05
+
+    # 检查左边界
+    left = 0
+    for i in range(w):
+        col = img[:, i]
+        if np.sum(np.all(col == [0, 0, 0], axis=-1)) / h > threshold:
+            left = i
+        else:
+            break
+
+    # 检查右边界
+    right = w - 1
+    for i in range(w - 1, -1, -1):
+        col = img[:, i]
+        if np.sum(np.all(col == [0, 0, 0], axis=-1)) / h > threshold:
+            right = i
+        else:
+            break
+
+    # 检查上边界
+    top = 0
+    for i in range(h):
+        row = img[i, :]
+        if np.sum(np.all(row == [0, 0, 0], axis=-1)) / w > threshold:
+            top = i
+        else:
+            break
+
+    # 检查下边界
+    bottom = h - 1
+    for i in range(h - 1, -1, -1):
+        row = img[i, :]
+        if np.sum(np.all(row == [0, 0, 0], axis=-1)) / w > threshold:
+            bottom = i
+        else:
+            break
+
+    # 裁剪
+
+    print(top, bottom, left, right)
+
+    cropped = img[top:bottom+1, left:right+1]
+
+    return cropped
+
+# 使用函数
+# corrected_image = mesh_to_image(...)  # 你之前的函数
+# cropped_result = crop_black_border(corrected_image)
+
+
+
+def crop_and_resize(img):
+    H, W ,_ = img.shape
+    original_size = (W, H)
+    # top, bottom, left, right = detect_black_border(img)
+
+    # 裁剪掉更多的范围
+
+    # print(top, bottom, left, right)
+    cropped_img = crop_black_border(img)
+    resized_img = cv2.resize(cropped_img, original_size)
+
+    # if top > 0:
+    #     top += 20
+    # if bottom < H-1:
+    #     bottom -= 20
+    # if left > 0:
+    #     left += 20
+    # if right < W-1:
+    #     right -= 20
+
+    # print(top, bottom, left, right)
+    # cropped_img = img[top:bottom+1, left:right+1]
+    # cropped_img = crop_black_border(img)
+    # resized_img = cv2.resize(cropped_img, original_size)
+    return resized_img
+
+
+
+
+
 def mesh_to_image(image, mesh_optimal,x_= 0,y_ = 0):
 
     H_, W_, _ = image.shape
@@ -45,10 +153,11 @@ def mesh_to_image(image, mesh_optimal,x_= 0,y_ = 0):
 
 
     # # 设定扩展的边界宽度
-    border_width = 50
+    border_width = 20
     # 使用copyMakeBorder来扩展图像边界
     image = cv2.copyMakeBorder(image, border_width, border_width, border_width, border_width, cv2.BORDER_CONSTANT, value=[0, 0, 0])
     H, W, _ = image.shape
+
     # 将mesh的坐标映射到扩展后的图像上
     mesh_optimal = cv2.resize(mesh_optimal, (W, H)) + 0.5
     print(mesh_optimal)
@@ -63,10 +172,10 @@ def mesh_to_image(image, mesh_optimal,x_= 0,y_ = 0):
     image_corrected = cv2.remap(image, x, y, interpolation=cv2.INTER_LINEAR,)
 
     # 最后, 裁剪掉扩展的边界
-    out = image_corrected[border_width : -border_width,border_width :-border_width,:]
+    out = image_corrected[border_width:-border_width, border_width:-border_width]
 
-    size = 50
-    out = cv2.resize(out[size: -size,size :-size,:], (W_, H_))
+    out = crop_and_resize(out)
+
     return out
 
 
@@ -113,7 +222,7 @@ if __name__ == '__main__':
     model = Energy(options, mesh_uniform_padded, mesh_stereo_padded, correction_strength, box_masks_padded,
                    seg_mask_padded, args.Q)
     optim = optim.Adam(model.parameters(), lr=args.lr)
-
+    # optim = optim.SGD(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=args.num_iter, eta_min=0)
 
     # perform optimization
