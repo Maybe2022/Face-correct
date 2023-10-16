@@ -160,7 +160,7 @@ def mesh_to_image(image, mesh_optimal,x_= 0,y_ = 0):
 
     # 将mesh的坐标映射到扩展后的图像上
     mesh_optimal = cv2.resize(mesh_optimal, (W, H)) + 0.5
-    print(mesh_optimal)
+    # print(mesh_optimal)
     x, y = mesh_optimal[:, :, 0], mesh_optimal[:, :, 1]
 
     x = x * W / Wm
@@ -225,6 +225,7 @@ if __name__ == '__main__':
     # optim = optim.SGD(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=args.num_iter, eta_min=0)
 
+
     # perform optimization
     print("optimizing")
     for i in range(args.num_iter):
@@ -241,7 +242,7 @@ if __name__ == '__main__':
             model.mesh[0:,:,-1] = model.source_mesh[0:, :, -1]
             model.mesh[1:, 0, :] = model.source_mesh[1:, 0, :]
             model.mesh[1:, -1, :] = model.source_mesh[1:, -1, :]
-        # scheduler.step()
+        scheduler.step()
         # print(i, loss.item())
 
     # calculate optical flow from the optimized mesh
