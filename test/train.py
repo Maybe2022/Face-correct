@@ -39,8 +39,9 @@ img_tensor = img_tensor.unsqueeze(0)
 
 # 现在你有一个适用于模型的PyTorch张量
 
-
 lable = None
+
+
 
 
 class Upsample(nn.Module):
