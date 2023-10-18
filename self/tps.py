@@ -63,6 +63,55 @@ class TPS:
         return grid
 
 
+class TPS(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, X, Y, w, h, device):
+
+        """ 计算grid"""
+        grid = torch.ones(1, h, w, 2, device=device)
+        grid[:, :, :, 0] = torch.linspace(-1, 1, w)
+        grid[:, :, :, 1] = torch.linspace(-1, 1, h)[..., None]
+        grid = grid.view(-1, h * w, 2)
+
+        """ 计算W, A"""
+        n, k = X.shape[:2]
+        device = X.device
+
+        Z = torch.zeros(1, k + 3, 2, device=device)
+        P = torch.ones(n, k, 3, device=device)
+        L = torch.zeros(n, k + 3, k + 3, device=device)
+
+        eps = 1e-9
+        D2 = torch.pow(X[:, :, None, :] - X[:, None, :, :], 2).sum(-1)
+        K = D2 * torch.log(D2 + eps)
+
+        P[:, :, 1:] = X
+        Z[:, :k, :] = Y
+        L[:, :k, :k] = K
+        L[:, :k, k:] = P
+        L[:, k:, :k] = P.permute(0, 2, 1)
+
+        Q = torch.solve(Z, L)[0]
+        W, A = Q[:, :k], Q[:, k:]
+
+        """ 计算U """
+        eps = 1e-9
+        D2 = torch.pow(grid[:, :, None, :] - X[:, None, :, :], 2).sum(-1)
+        U = D2 * torch.log(D2 + eps)
+
+        """ 计算P """
+        n, k = grid.shape[:2]
+        device = grid.device
+        P = torch.ones(n, k, 3, device=device)
+        P[:, :, 1:] = grid
+
+        # grid = P @ A + U @ W
+        grid = torch.matmul(P, A) + torch.matmul(U, W)
+        return grid.view(-1, h, w, 2)
+
 import matplotlib
 
 matplotlib.use("TkAgg")  # 或其他支持的后端，如 "Agg", "Qt5Agg", "GTK3Agg" 等。
