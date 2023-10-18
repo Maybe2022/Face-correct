@@ -43,6 +43,9 @@ class TPS:
         L = torch.cat((L_top, L_bottom), dim=1)  # shape: n, k+3, k+3
         Z = torch.cat((Y, torch.zeros((X.shape[0], 3, 2), dtype=torch.float32, device=device)),
                       dim=1)  # shape: n, k+3, 2
+
+        L += torch.eye(k+3, dtype=torch.float32, device=device) * 1e-6
+
         Q = torch.linalg.solve(L, Z)  #
 
         """ 计算U """
